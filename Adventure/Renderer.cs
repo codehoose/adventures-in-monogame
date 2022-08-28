@@ -112,7 +112,11 @@ namespace Adventure
                 for (int x = 0; x < 16; x++)
                 {
                     var pc = random.NextSingle();
-                    int sand = pc < .05f ? Sprites.SandStones : Sprites.SandTextured;
+                    int sand = Sprites.Sand;
+                    if (pc < .1)
+                    {
+                        sand = pc < .02f ? Sprites.SandStones : Sprites.SandTextured;
+                    }
 
                     _spriteSheet.Draw(_spriteBatch, new Vector2(x * 16f, y * 16f), sand);
                 }
