@@ -24,12 +24,12 @@ namespace Adventure
 
         public void Draw()
         {
+            DrawSand(_description.Seed);
+
             if (_description.WallNorth)
             {
                 DrawWall(true, _description.ExitNorth >= 0);
-            }
-            
-            DrawSand(_description.Seed);
+            }            
 
             if (_description.WallWest)
             {
@@ -46,6 +46,9 @@ namespace Adventure
                 DrawWall(false, _description.ExitSouth >= 0);
             }
 
+            if (!_description.RoomUnlocked)
+                DrawVisuals(_description.NorthExit);
+
             _spriteSheet.Draw(_spriteBatch, _player.Position, _player.Shape);
             if (_player.CurrentItem != null)
             {
@@ -59,6 +62,27 @@ namespace Adventure
             foreach (var item in items)
             {
                 _spriteSheet.Draw(_spriteBatch, item.Position, item.Shape);
+            }
+
+            DrawVisuals(_description.Visuals);
+        }
+
+        private void DrawVisuals(int[] visuals)
+        {
+            if (visuals == null || visuals.Length == 0)
+                return;
+
+            for(int y = 0; y < 12; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    int index = y * 16 + x;
+                    int valueAtIndex = visuals[index] - 1;
+                    if (valueAtIndex > -1)
+                    {
+                        _spriteSheet.Draw(_spriteBatch, new Vector2(x * 16f, y * 16f), valueAtIndex);
+                    }
+                }
             }
         }
 
@@ -107,7 +131,7 @@ namespace Adventure
         private void DrawSand(int seed)
         {
             Random random = new Random(seed);
-            for (int y = 1; y < 11; y++)
+            for (int y = 0; y < 12; y++)
             {
                 for (int x = 0; x < 16; x++)
                 {

@@ -9,6 +9,8 @@ namespace Adventure
 {
     public class Game1 : Game
     {
+        public static int NO_ROOM = -1;
+
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private SpriteSheet _spriteSheet;
@@ -17,6 +19,8 @@ namespace Adventure
         private Player _player;
         private RoomDescriptor _currentRoom;
         private Dictionary<string, InventoryItem> _inventory;
+        private List<Rectangle> _collisions = new List<Rectangle>();
+        private List<Rectangle> _lockedDoors = new List<Rectangle>();
 
         public Game1()
         {
@@ -59,6 +63,63 @@ namespace Adventure
             _currentRoom = newRoom;
             _currentRoom.RoomId = roomId;
             _renderer.SetDescription(roomId, _currentRoom);
+            SetupCollisions(_currentRoom.RoomUnlocked, _currentRoom.Collisions, _currentRoom.NorthExit);
+        }
+
+        private void SetupCollisions(bool roomUnlocked, int[] collisions, int[] northExit)
+        {
+            _collisions.Clear();
+            _lockedDoors.Clear();
+
+            if (collisions == null || collisions.Length == 0)
+                return;
+
+            if (northExit == null || northExit.Length == 0)
+                return;
+
+            for (int y = 0; y < 12; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    int index = y * 16 + x;
+                    bool blocker = !roomUnlocked && northExit[index] != 0;
+                    if (blocker || collisions[index] != 0)
+                    {
+                        Rectangle rect = new Rectangle(x * 16, y * 16, 16, 16);
+                        _collisions.Add(rect);
+                        if (blocker)
+                        {
+                            _lockedDoors.Add(rect);
+                        }
+                    }
+                }
+            }
+        }
+
+        private bool CollisionHit(Rectangle player)
+        {
+            foreach (var col in _collisions)
+            {
+                if (player.Intersects(col))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool LockedDoorHit(Rectangle player)
+        {
+            foreach(var col in _lockedDoors)
+            {
+                if (player.Intersects(col))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private Vector2 GetPlayerInput()
@@ -98,21 +159,21 @@ namespace Adventure
         {
             if (newPos.Y < 16 && _currentRoom.WallNorth)
             {
-                if (!(_currentRoom.ExitNorth > 0 && newPos.X > 7 * 16 && newPos.X < 9 * 16))
+                if (!(_currentRoom.ExitNorth > NO_ROOM && newPos.X > 7 * 16 && newPos.X < 9 * 16))
                     newPos.Y = 16;
             }
             else if (newPos.Y > 10 * 16 && _currentRoom.WallSouth)
             {
-                if (!(_currentRoom.ExitSouth > 0 && newPos.X > 7 * 16 && newPos.X < 9 * 16))
+                if (!(_currentRoom.ExitSouth > NO_ROOM && newPos.X > 7 * 16 && newPos.X < 9 * 16))
                     newPos.Y = 10 * 16;
             }
 
-            if (newPos.Y > 170 && _currentRoom.ExitSouth > 0)
+            if (newPos.Y > 170 && _currentRoom.ExitSouth > NO_ROOM)
             {
                 ChangeRoom(_currentRoom.ExitSouth, GameMap.Map[_currentRoom.ExitSouth]);
                 newPos.Y = 16;
             }
-            else if (newPos.Y < 8 && _currentRoom.ExitNorth > 0)
+            else if (newPos.Y < 8 && _currentRoom.ExitNorth > NO_ROOM)
             {
                 ChangeRoom(_currentRoom.ExitNorth, GameMap.Map[_currentRoom.ExitNorth]);
                 newPos.Y = 160;
@@ -126,12 +187,12 @@ namespace Adventure
             {
                 newPos.X = 14 * 16;
             }
-            else if (newPos.X < 0 && _currentRoom.ExitWest >= 0)
+            else if (newPos.X < 0 && _currentRoom.ExitWest > NO_ROOM)
             {
                 ChangeRoom(_currentRoom.ExitWest, GameMap.Map[_currentRoom.ExitWest]);
                 newPos.X = 15 * 16;
             }
-            else if (newPos.X > 256 - 8 && _currentRoom.ExitEast >= 0)
+            else if (newPos.X > 256 - 8 && _currentRoom.ExitEast > NO_ROOM)
             {
                 ChangeRoom(_currentRoom.ExitEast, GameMap.Map[_currentRoom.ExitEast]);
                 newPos.X = 1;
@@ -165,9 +226,23 @@ namespace Adventure
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            Vector2 oldPos = _player.Position;
             Vector2 newPos = _player.Position + GetPlayerInput();
+            
             _player.Position = CheckScreenBound(newPos);
             CheckObjectCollisions(newPos);
+
+            if (_player.CurrentItem?.Shape == Sprites.Sword && LockedDoorHit(newPos.ToRectangle()))
+            {
+                _currentRoom.RoomUnlocked = true;
+                foreach (var door in _lockedDoors) _collisions.Remove(door);
+                _lockedDoors.Clear();
+            }
+
+            if (CollisionHit(newPos.ToRectangle()))
+            {
+                _player.Position = oldPos;
+            }
 
             base.Update(gameTime);
         }
