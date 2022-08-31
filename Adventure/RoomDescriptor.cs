@@ -1,4 +1,6 @@
-﻿namespace Adventure
+﻿using Microsoft.Xna.Framework;
+
+namespace Adventure
 {
     internal class RoomDescriptor
     {
@@ -16,6 +18,9 @@
         public int RoomId;
 
         public bool RoomUnlocked;
+        public bool BarrierEastWest;
+        public Color ColourTint = Color.White;
+        public string Key; // This is the name of the key that opens the doors
 
         // These are going to be 16x12 arrays of integers that point to a value in the sprite sheet
         public int[] Visuals;

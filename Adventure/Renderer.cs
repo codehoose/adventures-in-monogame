@@ -80,7 +80,7 @@ namespace Adventure
                     int valueAtIndex = visuals[index] - 1;
                     if (valueAtIndex > -1)
                     {
-                        _spriteSheet.Draw(_spriteBatch, new Vector2(x * 16f, y * 16f), valueAtIndex);
+                        _spriteSheet.Draw(_spriteBatch, new Vector2(x * 16f, y * 16f), valueAtIndex, _description.ColourTint);
                     }
                 }
             }
@@ -101,10 +101,16 @@ namespace Adventure
         {
             float offset = isLeft ? 0 : 15 * 16;
             int wall = isLeft ? Sprites.WallLeft : Sprites.WallRight;
-
-            for(int y = 0; y < 12; y++)
+            Color color = Color.White;
+            if (_description.BarrierEastWest)
             {
-                _spriteSheet.Draw(_spriteBatch, new Vector2(offset, y * 16), wall);
+                wall = Sprites.Barrier;
+                color = Color.Red;
+            }
+
+            for (int y = 1; y < 12; y++)
+            {
+                _spriteSheet.Draw(_spriteBatch, new Vector2(offset, y * 16), wall, color);
             }
         }
 

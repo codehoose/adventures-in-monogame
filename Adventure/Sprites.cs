@@ -6,6 +6,7 @@
         public static int Wall = 40;
         public static int WallLeft = 57;
         public static int WallRight = 59;
+        public static int Barrier = 62;
 
         // Doors
         public static int DoorClosedLeft = 47;
@@ -31,7 +32,9 @@
         public static int ChestOpen2 = 91;
         public static int ChestOpen = 92;
 
-        // Weapons
+        // Weapons and Pick ups
+        public static int BlackKey = 102;
+        public static int YellowKey = 103;
         public static int Sword = 106;
 
         // Player and NPCs

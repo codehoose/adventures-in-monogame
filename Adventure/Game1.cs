@@ -21,6 +21,7 @@ namespace Adventure
         private Dictionary<string, InventoryItem> _inventory;
         private List<Rectangle> _collisions = new List<Rectangle>();
         private List<Rectangle> _lockedDoors = new List<Rectangle>();
+        private bool _roomChanged;
 
         public Game1()
         {
@@ -44,13 +45,31 @@ namespace Adventure
             var texture = Content.Load<Texture2D>("spritesheet");
             _spriteSheet = new SpriteSheet(texture, 16, 16);
             _nativeRenderTarget = new RenderTarget2D(GraphicsDevice, 256, 192);
+
             _inventory.Add("Sword", new InventoryItem
             {
-                CurrentRoom = 2,
+                CurrentRoom = 9,
                 Shape = Sprites.Sword,
+                IsEquipped = false,
+                Position = new Vector2(32, 96)
+            });
+
+            _inventory.Add("BlackKey", new InventoryItem
+            {
+                CurrentRoom = 2,
+                Shape = Sprites.BlackKey,
                 IsEquipped = false,
                 Position = new Vector2(32, 88)
             });
+
+            _inventory.Add("YellowKey", new InventoryItem
+            {
+                CurrentRoom = 3,
+                Shape = Sprites.YellowKey,
+                IsEquipped = false,
+                Position = new Vector2(32, 88)
+            });
+
             _renderer = new Renderer(_spriteBatch, _spriteSheet, _inventory);
             _currentRoom = GameMap.FirstRoom;
             _renderer.SetDescription(0, _currentRoom);
@@ -62,6 +81,7 @@ namespace Adventure
         {
             _currentRoom = newRoom;
             _currentRoom.RoomId = roomId;
+            _roomChanged = true;
             _renderer.SetDescription(roomId, _currentRoom);
             SetupCollisions(_currentRoom.RoomUnlocked, _currentRoom.Collisions, _currentRoom.NorthExit);
         }
@@ -74,20 +94,18 @@ namespace Adventure
             if (collisions == null || collisions.Length == 0)
                 return;
 
-            if (northExit == null || northExit.Length == 0)
-                return;
-
             for (int y = 0; y < 12; y++)
             {
                 for (int x = 0; x < 16; x++)
                 {
                     int index = y * 16 + x;
-                    bool blocker = !roomUnlocked && northExit[index] != 0;
-                    if (blocker || collisions[index] != 0)
+                    bool hasExits = northExit != null && northExit.Length == collisions.Length;
+                    bool isLockedDoor = !roomUnlocked && northExit != null && hasExits && northExit[index] != 0;
+                    if (isLockedDoor || collisions[index] != 0)
                     {
                         Rectangle rect = new Rectangle(x * 16, y * 16, 16, 16);
                         _collisions.Add(rect);
-                        if (blocker)
+                        if (isLockedDoor)
                         {
                             _lockedDoors.Add(rect);
                         }
@@ -146,13 +164,18 @@ namespace Adventure
 
             if (keyboardState.GetPressedKeys().Contains(Keys.Space) && _player.CurrentItem != null)
             {
-                _player.CurrentItem.IsEquipped = false;
-                _player.CurrentItem.CurrentRoom = _currentRoom.RoomId;
-                _player.CurrentItem.Position = _player.Position + new Vector2(16, 0);
-                _player.CurrentItem = null;
+                DropCurrentItem();
             }
 
             return offset;
+        }
+
+        private void DropCurrentItem()
+        {
+            _player.CurrentItem.IsEquipped = false;
+            _player.CurrentItem.CurrentRoom = _currentRoom.RoomId;
+            _player.CurrentItem.Position = _player.Position + new Vector2(16, 0);
+            _player.CurrentItem = null;
         }
 
         private Vector2 CheckScreenBound(Vector2 newPos)
@@ -215,6 +238,11 @@ namespace Adventure
 
                 if (playerRect.Intersects(itemRect))
                 {
+                    if (_player.CurrentItem != null)
+                    {
+                        DropCurrentItem();
+                    }
+
                     _player.CurrentItem = item;
                     _player.CurrentItem.IsEquipped = true;
                 }
@@ -226,25 +254,38 @@ namespace Adventure
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
+            _roomChanged = false;
+
             Vector2 oldPos = _player.Position;
             Vector2 newPos = _player.Position + GetPlayerInput();
             
             _player.Position = CheckScreenBound(newPos);
             CheckObjectCollisions(newPos);
 
-            if (_player.CurrentItem?.Shape == Sprites.Sword && LockedDoorHit(newPos.ToRectangle()))
+            if (HasKey() && LockedDoorHit(newPos.ToRectangle()))
             {
                 _currentRoom.RoomUnlocked = true;
                 foreach (var door in _lockedDoors) _collisions.Remove(door);
                 _lockedDoors.Clear();
             }
 
-            if (CollisionHit(newPos.ToRectangle()))
+            if (!_roomChanged && CollisionHit(newPos.ToRectangle()))
             {
                 _player.Position = oldPos;
             }
 
             base.Update(gameTime);
+        }
+
+        private bool HasKey()
+        {
+            foreach (var kvp in _inventory)
+            {
+                if (kvp.Key == _currentRoom.Key && kvp.Value.IsEquipped)
+                    return true;
+            }
+
+            return false;
         }
 
         protected override void Draw(GameTime gameTime)
