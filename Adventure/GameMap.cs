@@ -26,7 +26,7 @@ namespace Adventure
             Seed = 258,
         };
 
-        public static RoomDescriptor SwordDragonChamber = new RoomDescriptor
+        public static RoomDescriptor BlackKeyDragonChamber = new RoomDescriptor
         {
             WallNorth = true,
             WallSouth = true,
@@ -178,7 +178,7 @@ namespace Adventure
         {
             { 0, FirstRoom },
             { 1, EastOfFirstRoom },
-            { 2, SwordDragonChamber },
+            { 2, BlackKeyDragonChamber },
             { 3, YellowCastle },
             { 4, OutsideMazeEntrance },
             { 5, MazeEntrance },

@@ -11,15 +11,20 @@ namespace Adventure
         private readonly SpriteBatch _spriteBatch;
         private readonly SpriteSheet _spriteSheet;
         private readonly Dictionary<string, InventoryItem> _inventory;
+        private readonly List<Mob> _mobs;
         private int _roomId;
         private RoomDescriptor _description;
         private Player _player;
 
-        public Renderer(SpriteBatch spriteBatch, SpriteSheet spriteSheet, Dictionary<string, InventoryItem> inventory)
+        public Renderer(SpriteBatch spriteBatch,
+                        SpriteSheet spriteSheet, 
+                        Dictionary<string, InventoryItem> inventory,
+                        List<Mob> mobs)
         {
             _spriteBatch = spriteBatch;
             _spriteSheet = spriteSheet;
             _inventory = inventory;
+            _mobs = mobs;
         }
 
         public void Draw()
@@ -52,7 +57,7 @@ namespace Adventure
             _spriteSheet.Draw(_spriteBatch, _player.Position, _player.Shape);
             if (_player.CurrentItem != null)
             {
-                _spriteSheet.Draw(_spriteBatch, _player.Position + new Vector2(16, 0), _player.CurrentItem.Shape);
+                _spriteSheet.Draw(_spriteBatch, _player.CurrentItem.Position, _player.CurrentItem.Shape);
             }
 
             var items = _inventory.Where(i => (!i.Value.IsEquipped && i.Value.CurrentRoom == _roomId))
@@ -65,6 +70,19 @@ namespace Adventure
             }
 
             DrawVisuals(_description.Visuals);
+            DrawMobs(_mobs);
+        }
+
+        private void DrawMobs(List<Mob> mobs)
+        {
+            foreach (var mob in mobs)
+            {
+                if (_description.RoomId == mob.Room || mob.Room == -1)
+                {
+                    var color = mob.IsDead ? Color.Red : Color.White;
+                    _spriteSheet.Draw(_spriteBatch, mob.Position, mob.SpriteId, color);
+                }
+            }
         }
 
         private void DrawVisuals(int[] visuals)

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using SharpDX.MediaFoundation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +22,7 @@ namespace Adventure
         private Dictionary<string, InventoryItem> _inventory;
         private List<Rectangle> _collisions = new List<Rectangle>();
         private List<Rectangle> _lockedDoors = new List<Rectangle>();
+        private List<Mob> _mobs = new List<Mob>();
         private bool _roomChanged;
 
         public Game1()
@@ -70,7 +72,9 @@ namespace Adventure
                 Position = new Vector2(32, 88)
             });
 
-            _renderer = new Renderer(_spriteBatch, _spriteSheet, _inventory);
+            _mobs.Add(new Mob(Sprites.Lobster, 2, new Vector2(48, 48)));
+
+            _renderer = new Renderer(_spriteBatch, _spriteSheet, _inventory, _mobs);
             _currentRoom = GameMap.FirstRoom;
             _renderer.SetDescription(0, _currentRoom);
             _player = new Player { Position = new Vector2(120, 88), Shape = Sprites.Wizard };
@@ -274,7 +278,46 @@ namespace Adventure
                 _player.Position = oldPos;
             }
 
+            if (_player.CurrentItem != null)
+            {
+                _player.CurrentItem.Position = _player.Position + new Vector2(16, 0);
+            }
+
+            UpdateMobs(_mobs, gameTime);
+
             base.Update(gameTime);
+        }
+
+        private void UpdateMobs(List<Mob> mobs, GameTime gameTime)
+        {
+            int index = 0;
+            while(index < mobs.Count)
+            {
+                var mob = mobs[index];
+                if (!mob.IsDead && (mob.Room == _currentRoom.RoomId || mob.Room == -1))
+                {
+                    var curPos = mob.Position;
+                    var targetPos = _player.Position;
+                    var lerp = Vector2.Lerp(curPos, targetPos, (float)gameTime.ElapsedGameTime.TotalSeconds);
+                    mob.Position = lerp;
+
+                    if (_player.CurrentItem.IsEquipped && _player.CurrentItem.Shape == Sprites.Sword)
+                    {
+                        var swordBox = _player.CurrentItem.Position.ToRectangle();
+                        var mobBox = mob.Position.ToRectangle();
+                        if (swordBox.Intersects(mobBox))
+                        {
+                            mob.Health--;
+                            if (mob.Health< 0)
+                            {
+                                mob.IsDead = true;
+                            }
+                        }
+                    }
+                }
+
+                index++;
+            }
         }
 
         private bool HasKey()
